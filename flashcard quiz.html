@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Flashcard App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #dfeaf5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .app-container {
+      background-color: #ffffff;
+      width: 360px;
+      min-height: 620px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      border-radius: 20px;
+      padding: 20px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .card {
+      width: 100%;
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.08);
+      margin-bottom: 15px;
+      animation: bounceIn 0.5s;
+    }
+
+    .question, .answer {
+      opacity: 0;
+      transition: opacity 0.5s ease-in;
+    }
+
+    .show {
+      opacity: 1;
+    }
+
+    .answer {
+      font-size: 17px;
+      color: #444;
+      display: none;
+      margin-top: 10px;
+    }
+
+    .controls button {
+      padding: 10px;
+      margin: 4px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      font-size: 15px;
+      width: 48%;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    #progress, #score, #timer, #profile {
+      font-size: 15px;
+      margin-bottom: 8px;
+    }
+
+    #funfact {
+      background-color: #e0f7fa;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 10px;
+      font-size: 14px;
+      display: none;
+    }
+
+    #userAnswer {
+      width: 100%;
+      padding: 8px;
+      margin-top: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 15px;
+    }
+
+    #feedback {
+      margin-top: 6px;
+      font-weight: bold;
+    }
+
+    #leaderboard {
+      width: 100%;
+      margin-top: 15px;
+    }
+
+    #leaderboard h3 {
+      margin: 5px 0;
+    }
+
+    #leaderboard ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    #leaderboard li {
+      background: #f1f1f1;
+      padding: 6px;
+      margin: 3px 0;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    /* Popup */
+    #popup {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+
+    #popup-content {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      width: 300px;
+      text-align: center;
+    }
+
+    #popup-content input {
+      width: 90%;
+      padding: 8px;
+      margin: 8px 0;
+      font-size: 15px;
+    }
+
+    #popup-content button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    @keyframes bounceIn {
+      0% { transform: scale(0.95); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+
+<div id="popup">
+  <div id="popup-content">
+    <h3>Enter Your Profile Info</h3>
+    <input type="text" id="nameInput" placeholder="Your name" required />
+    <input type="number" id="ageInput" placeholder="Your age" required />
+    <button onclick="submitProfile()">Start Quiz</button>
+  </div>
+</div>
+
+<div class="app-container" id="app" style="display: none;">
+  <div id="profile">🙋 Name: -- | Age: --</div>
+  <div id="progress">Card 1 of 10</div>
+  <div id="score">Score: 0</div>
+  <div id="timer">⏳ Time left: 10s</div>
+
+  <div class="card">
+    <div class="question" id="question">Loading...</div>
+    <input type="text" id="userAnswer" placeholder="Type your answer here..." />
+    <button onclick="checkTypedAnswer()">Check Answer</button>
+    <div id="feedback"></div>
+    <div class="answer" id="answer">Answer will show here.</div>
+    <div id="funfact"></div>
+  </div>
+
+  <div class="controls">
+    <button onclick="prevCard()">Previous</button>
+    <button onclick="showAnswer()">Show Answer</button>
+    <button onclick="readAgain()">Read Again</button>
+    <button onclick="nextCard()">Next</button>
+  </div>
+
+  <div id="leaderboard">
+    <h3>🏆 Leaderboard</h3>
+    <ul id="leaderboardList"></ul>
+  </div>
+</div>
+
+<script>
+  const flashcards = [
+    { question: "What is the capital of France?", answer: "Paris" },
+    { question: "What is 2 + 2?", answer: "4" },
+    { question: "What is the boiling point of water?", answer: "100 degrees Celsius" },
+    { question: "Who wrote Hamlet?", answer: "William Shakespeare" },
+    { question: "What planet is known as the Red Planet?", answer: "Mars" },
+    { question: "What is the largest ocean on Earth?", answer: "Pacific Ocean" },
+    { question: "Who painted the Mona Lisa?", answer: "Leonardo da Vinci" },
+    { question: "What gas do plants absorb from the atmosphere?", answer: "Carbon Dioxide" },
+    { question: "How many continents are there?", answer: "Seven" },
+    { question: "Which animal is known as the King of the Jungle?", answer: "Lion" }
+  ];
+
+  const funFacts = [
+    "Honey never spoils!",
+    "Bananas are berries, strawberries aren't!",
+    "A cloud can weigh over a million pounds!",
+    "Octopuses have three hearts!",
+    "The Eiffel Tower grows in summer!",
+    "DNA can stretch to Pluto and back 17 times!",
+    "A day on Venus is longer than its year!",
+    "Wombat poop is cube-shaped!",
+    "Sharks existed before trees!",
+    "Sloths hold breath longer than dolphins!"
+  ];
+
+  let currentCard = 0;
+  let answerShown = false;
+  let score = 0;
+  let timer;
+  let timeLeft = 10;
+  let userName = '';
+  let userAge = '';
+
+  function updateScoreDisplay() {
+    document.getElementById("score").textContent = `Score: ${score}`;
+  }
+
+  function speak(text) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utterance);
+  }
+
+  function resetTimer() {
+    clearInterval(timer);
+    timeLeft = 10;
+    document.getElementById("timer").textContent = `⏳ Time left: ${timeLeft}s`;
+    timer = setInterval(() => {
+      timeLeft--;
+      document.getElementById("timer").textContent = `⏳ Time left: ${timeLeft}s`;
+      if (timeLeft <= 0) {
+        clearInterval(timer);
+        document.getElementById("timer").textContent = "⏰ Time's up!";
+        showAnswer();
+      }
+    }, 1000);
+  }
+
+  function showCard(index) {
+    const q = document.getElementById("question");
+    const a = document.getElementById("answer");
+    const input = document.getElementById("userAnswer");
+    const feedback = document.getElementById("feedback");
+    const fact = document.getElementById("funfact");
+
+    q.textContent = flashcards[index].question;
+    a.textContent = flashcards[index].answer;
+    a.style.display = "none";
+    feedback.textContent = "";
+    fact.style.display = "none";
+    input.value = "";
+
+    document.getElementById("progress").textContent = `Card ${index + 1} of ${flashcards.length}`;
+    q.classList.remove("show");
+    a.classList.remove("show");
+
+    setTimeout(() => q.classList.add("show"), 50);
+    speak(flashcards[index].question);
+    answerShown = false;
+    resetTimer();
+  }
+
+  function showAnswer() {
+    const a = document.getElementById("answer");
+    if (!answerShown) {
+      a.style.display = "block";
+      setTimeout(() => a.classList.add("show"), 50);
+      speak("The answer is: " + a.textContent);
+      answerShown = true;
+      document.getElementById("funfact").textContent = "💡 " + funFacts[currentCard];
+      document.getElementById("funfact").style.display = "block";
+      clearInterval(timer);
+    }
+  }
+
+  function readAgain() {
+    speak(document.getElementById("question").textContent);
+  }
+
+  function checkTypedAnswer() {
+    const userInput = document.getElementById("userAnswer").value.trim().toLowerCase();
+    const correctAnswer = flashcards[currentCard].answer.trim().toLowerCase();
+    const feedback = document.getElementById("feedback");
+
+    if (!userInput) {
+      feedback.textContent = "⛔ Please enter your answer.";
+      feedback.style.color = "red";
+      speak("Please type your answer.");
+      return;
+    }
+
+    if (userInput === correctAnswer) {
+      feedback.textContent = "🎉 Correct! Well done!";
+      feedback.style.color = "green";
+      speak("Yay! You're right!");
+      score++;
+      updateScoreDisplay();
+    } else {
+      feedback.textContent = "😢 Oops, that's not right.";
+      feedback.style.color = "crimson";
+      speak("Oh no, that's incorrect. But keep trying!");
+    }
+
+    clearInterval(timer);
+    if (currentCard === flashcards.length - 1) saveToLeaderboard();
+  }
+
+  function nextCard() {
+    if (currentCard < flashcards.length - 1) {
+      currentCard++;
+      showCard(currentCard);
+    } else {
+      alert("🎉 Quiz Completed!");
+      saveToLeaderboard();
+    }
+  }
+
+  function prevCard() {
+    if (currentCard > 0) {
+      currentCard--;
+      showCard(currentCard);
+    } else {
+      alert("👈 This is the first card.");
+    }
+  }
+
+  function submitProfile() {
+    userName = document.getElementById("nameInput").value.trim();
+    userAge = document.getElementById("ageInput").value.trim();
+    if (userName && userAge) {
+      document.getElementById("profile").textContent = `🙋 Name: ${userName} | Age: ${userAge}`;
+      document.getElementById("popup").style.display = "none";
+      document.getElementById("app").style.display = "block";
+      showCard(currentCard);
+    } else {
+      alert("Please enter both name and age.");
+    }
+  }
+
+  function saveToLeaderboard() {
+    const leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+    leaderboard.push({ name: userName, score: score });
+    leaderboard.sort((a, b) => b.score - a.score);
+    localStorage.setItem("leaderboard", JSON.stringify(leaderboard.slice(0, 5)));
+    displayLeaderboard();
+  }
+
+  function displayLeaderboard() {
+    const leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+    const list = document.getElementById("leaderboardList");
+    list.innerHTML = "";
+    leaderboard.forEach((entry, index) => {
+      const li = document.createElement("li");
+      li.textContent = `${index + 1}. ${entry.name} - ${entry.score}`;
+      list.appendChild(li);
+    });
+  }
+
+  displayLeaderboard(); // Load on page load
+</script>
+
+</body>
+</html>
